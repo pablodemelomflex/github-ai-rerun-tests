@@ -1,0 +1,45 @@
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'APP_REPO_URL', defaultValue: '', description: 'Official app repository URL')
+    string(name: 'APP_BRANCH', defaultValue: '', description: 'Branch from the app PR')
+    string(name: 'APP_PR_NUMBER', defaultValue: '', description: 'App PR number')
+    string(name: 'APP_COMMIT_SHA', defaultValue: '', description: 'App commit SHA')
+  }
+
+  stages {
+    stage('Show parameters') {
+      steps {
+        echo "App repo: ${params.APP_REPO_URL}"
+        echo "App branch: ${params.APP_BRANCH}"
+        echo "App PR: ${params.APP_PR_NUMBER}"
+        echo "App commit: ${params.APP_COMMIT_SHA}"
+      }
+    }
+
+    stage('Install testing dependencies') {
+      steps {
+        sh 'npm ci'
+      }
+    }
+
+    stage('Checkout app PR code') {
+      steps {
+        sh '''
+          rm -rf app-under-test
+          git clone "$APP_REPO_URL" app-under-test
+          cd app-under-test
+          git fetch origin "$APP_BRANCH"
+          git checkout "$APP_COMMIT_SHA"
+        '''
+      }
+    }
+
+    stage('Run tests against app PR code') {
+      steps {
+        sh 'npm run test:app'
+      }
+    }
+  }
+}
